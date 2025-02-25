@@ -214,7 +214,7 @@
                 </header>
         </section>
   
-        <section class="sf-section container-fluid">
+        <section class="sf-section container-fluid ps-0">
             <aside class="sf-sidebar pt-4 ps-3">
                 <ul>
                     <li><asp:Button ID="runTemplateAnalysis" runat="server" Text ="Templates" CssClass="sf-sidebar__buton" /></li>
