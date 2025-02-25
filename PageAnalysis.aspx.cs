@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Web;
 using System.Web.UI.WebControls;
 using Telerik.OpenAccess;
 using Telerik.Sitefinity.Abstractions;
@@ -80,6 +81,8 @@ namespace SitefinityWebApp
                 this.pageList.Attributes["WidgetKey"] = string.Empty;
                 this.pageList.Attributes["TemplateId"] = string.Empty;
                 this.pageList.AllowSorting = true;
+                this.AllWidgets.Attributes["PageId"] = string.Empty;
+                this.AllWidgets.Attributes["TemplateId"] = string.Empty;
                 switch (screenName)
                 {
                     case "Templates":
@@ -700,7 +703,7 @@ public class WidgetReport
             {
                 Id = p.Id,
                 PageNodeId = p.NavigationNodeId,
-                Title = p.NavigationNode.Title,
+                Title = HttpUtility.HtmlEncode(p.NavigationNode.Title),
                 Framework = TemplatesReport.GetFrameworkName((p as IRendererCommonData).Renderer, p.Template),
                 WidgetsCount = WidgetReport.GetWidgetsOnPageCount(pageManager, p),
                 Language = p.Culture != null ? p.Culture.ToUpper() : null,
@@ -1196,7 +1199,7 @@ public class PagesReport
             {
                 Id = p.Id,
                 PageNodeId = p.NavigationNodeId,
-                Title = p.NavigationNode.Title,
+                Title = HttpUtility.HtmlEncode(p.NavigationNode.Title),
                 Framework = TemplatesReport.GetFrameworkName((p as IRendererCommonData).Renderer, p.Template),
                 WidgetsCount = WidgetReport.GetWidgetsOnPageCount(pageManager, p),
                 CustomWidgetsCount = WidgetReport.GetCustomWidgetsOnPageCount(pageManager, p, p.Template?.Framework == PageTemplateFramework.Mvc),
@@ -1220,7 +1223,7 @@ public class PagesReport
         {
             Id = pageData.Id,
             PageNodeId = pageData.NavigationNodeId,
-            Title = pageData.NavigationNode.Title,
+            Title = HttpUtility.HtmlEncode(pageData.NavigationNode.Title),
             Framework = TemplatesReport.GetFrameworkName((pageData as IRendererCommonData).Renderer, pageData.Template),
             WidgetsCount = WidgetReport.GetWidgetsOnPageCount(pageManager, pageData),
             CustomWidgetsCount = WidgetReport.GetCustomWidgetsOnPageCount(pageManager, pageData, pageData.Template?.Framework == PageTemplateFramework.Mvc),
@@ -1248,8 +1251,14 @@ public class PagesReport
 
         var multisiteContext = SystemManager.CurrentContext as MultisiteContext;
         var site = multisiteContext.GetSiteBySiteMapRoot(page.RootNodeId);
-        
-        return $"{relativePageUrl}?sf_site={site.Id}";
+        if (site == null)
+        {
+            return $"{relativePageUrl}";
+        }
+        else
+        {
+            return $"{relativePageUrl}?sf_site={site.Id}";
+        }
     }
 }
 

@@ -5,7 +5,7 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
-    <title>Sitefinity Migration Analysis Tool</title>
+    <title>Sitefinity Migration Analyzer</title>
     <link rel="icon" type="image/x-icon" href="/adminapp/favicon.ico" />
      <script>
          function bootstrapFallBack() {
@@ -204,7 +204,7 @@
                 <header class="row px-3 sf-top-header">
                     <div class="col align-items-center d-inline-flex">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 33.62 35.91"><defs><style>.cls-1{fill:#5ce500;}</style></defs><title>progress</title><g id="Layer_2" data-name="Layer 2"><g id="Description"><path class="cls-1" d="M33.62,28.18A1.38,1.38,0,0,1,33,29.26l-8.71,5V14.88L7.47,5.18l8.71-5a1.39,1.39,0,0,1,1.25,0L33.62,9.49ZM20.54,17,9,10.39a1.39,1.39,0,0,0-1.25,0L0,14.88l12.14,7v14l7.77-4.49a1.39,1.39,0,0,0,.63-1.08ZM0,28.9l8.4,4.85V24Z"/></g></g></svg>
-                        <div class="h6 ms-2 mb-0">Sitefinity Migration Assistant</div>
+                        <div class="h6 ms-2 mb-0">Sitefinity Migration Analyzer</div>
                     </div>
                     <div class="col d-inline-flex align-items-center justify-content-end">
                         <div class="me-2 d-inline-flex flex-shrink-0">Select site</div>
