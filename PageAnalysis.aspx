@@ -296,7 +296,7 @@
             DataNavigateUrlFormatString="{0}" Target="_blank" />
         <asp:TemplateField HeaderText="CLI command" >
             <ItemTemplate>
-                <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyPageCommandToClipboard(\"{0}\"); return false;", Eval("PageNodeId")) %>' >Copy</asp:LinkButton> 
+                <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyPageCommandToClipboard(\"{0}\", \"{1}\"); return false;", Eval("PageNodeId"), Eval("SiteId")) %>' >Copy</asp:LinkButton> 
             </ItemTemplate>
         </asp:TemplateField>
     </Columns>
@@ -398,7 +398,7 @@
                     DataNavigateUrlFormatString="{0}" Target="_blank" />
                 <asp:TemplateField HeaderText="CLI command" >
                     <ItemTemplate>
-                        <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyPageCommandToClipboard(\"{0}\"); return false;", Eval("PageNodeId")) %>' >Copy</asp:LinkButton> 
+                        <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyPageCommandToClipboard(\"{0}\", \"{1}\"); return false;", Eval("PageNodeId"), Eval("SiteId")) %>' >Copy</asp:LinkButton> 
                     </ItemTemplate>
                 </asp:TemplateField>
             </Columns>
@@ -459,8 +459,8 @@
 
     </form>
     <script>
-        async function copyPageCommandToClipboard(pageId) {
-            var text = "sf migrate page " + pageId
+        async function copyPageCommandToClipboard(pageId, siteId) {
+            var text = "sf migrate page " + pageId + " --site " + siteId
             try {
                 await navigator.clipboard.writeText(text);
             }

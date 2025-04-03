@@ -9,6 +9,7 @@ using System.Web.UI.WebControls;
 using Telerik.OpenAccess;
 using Telerik.Sitefinity.Abstractions;
 using Telerik.Sitefinity.Data.Linq.Dynamic;
+using Telerik.Sitefinity.Data.Metadata;
 using Telerik.Sitefinity.Lifecycle;
 using Telerik.Sitefinity.Model;
 using Telerik.Sitefinity.Modules.Pages;
@@ -42,6 +43,16 @@ namespace SitefinityWebApp
 
                 var siteMapRootNodeId = defaultSite?.SiteMapRootNodeId;
                 this.SetUpTemplatesScreen(siteMapRootNodeId, this.siteSelection.SelectedValue);
+
+                MetadataManager metadataManager = MetadataManager.GetManager();
+                var sitefinityVersionModel = metadataManager.GetModuleVersion("Sitefinity");
+                if (sitefinityVersionModel.Version < new Version(15, 2, 8428))
+                {
+                    this.pageList.Columns[this.pageList.Columns.Count - 1].Visible = false;
+                    this.templateList.Columns[this.templateList.Columns.Count - 1].Visible = false;
+                    this.templateHierarchyList.Columns[this.templateHierarchyList.Columns.Count - 1].Visible = false;
+                    this.singlePageList.Columns[this.singlePageList.Columns.Count - 1].Visible = false;
+                }
             }
         }
 
@@ -395,7 +406,7 @@ namespace SitefinityWebApp
 
             var widgetReport = new WidgetReport();
             widgetReport.PopulateBasicWidgetInformation(selectedSiteId, parentTemplateId, null, WidgetLocationMode.TemplateOnly, take: this.AllWidgets.PageSize);
-            
+
             this.AllWidgets.Attributes["TemplateId"] = arg[0];
             this.AllWidgets.Attributes["PageId"] = string.Empty;
             this.AllWidgets.DataSource = widgetReport.AllWidgets;
@@ -420,8 +431,8 @@ namespace SitefinityWebApp
             var pageId = Guid.Parse(arg[0]);
 
             var pageReport = new PagesReport();
-            var selectedPage = pageReport.GetPageInfo(pageId);
-            this.singlePageList.DataSource = new List<PagesInfo>() { selectedPage };
+            var selectedPageHierarchy = pageReport.GetPageInfo(pageId);
+            this.singlePageList.DataSource = selectedPageHierarchy;
             this.singlePageList.VirtualItemCount = 1;
             this.singlePageList.DataBind();
 
@@ -703,7 +714,7 @@ public class WidgetReport
             {
                 Id = p.Id,
                 PageNodeId = p.NavigationNodeId,
-                Title = HttpUtility.HtmlEncode(p.NavigationNode.Title),
+                Title = HttpUtility.HtmlEncode(p.NavigationNode.Title.GetString(CultureInfo.GetCultureInfo(p.Culture ?? string.Empty), true)),
                 Framework = TemplatesReport.GetFrameworkName((p as IRendererCommonData).Renderer, p.Template),
                 WidgetsCount = WidgetReport.GetWidgetsOnPageCount(pageManager, p),
                 Language = p.Culture != null ? p.Culture.ToUpper() : null,
@@ -711,7 +722,8 @@ public class WidgetReport
                 Status = Enum.GetName(typeof(ContentLifecycleStatus), p.Status),
                 IsPublished = p.IsPublished(null),
                 PageUrl = PagesReport.GetEditPageUrl(p.NavigationNode, p.Culture),
-                ParentTemplateIsNullOrMigrated = TemplateInfo.GetParentTemplateIsMigrated(p.Template)
+                ParentTemplateIsNullOrMigrated = TemplateInfo.GetParentTemplateIsMigrated(p.Template),
+                SiteId = PagesReport.GetSiteId(p.NavigationNode)
             }).ToList();
 
         return pagesInfo;
@@ -1019,11 +1031,9 @@ public class WidgetInfo
     public Dictionary<string, string> MvcWidgetsMap = new Dictionary<string, string>()
         {
             { "Content block", "SitefinityContentBlock"},
-            { "Blogs", "SitefinityContentList"},
             { "Blog posts", "SitefinityContentList"},
             { "News", "SitefinityContentList"},
             { "Events", "SitefinityContentList"},
-            { "Calendar", "SitefinityContentList"},
             { "List", "SitefinityContentList"},
             { "DynamicContentController", "SitefinityContentList"},
             { "Document link", "SitefinityDocumentList"},
@@ -1049,7 +1059,6 @@ public class WidgetInfo
     public Dictionary<string, string> WebFormsWidgetsMap = new Dictionary<string, string>()
         {
             { "Telerik.Sitefinity.Modules.GenericContent.Web.UI.ContentBlock", "SitefinityContentBlock"},
-            { "Telerik.Sitefinity.Modules.Blogs.Web.UI.BlogsListControl", "SitefinityContentList"},
             { "Telerik.Sitefinity.Modules.Blogs.Web.UI.BlogPostView", "SitefinityContentList"},
             { "Telerik.Sitefinity.Modules.News.Web.UI.NewsView", "SitefinityContentList"},
             { "Telerik.Sitefinity.Modules.Events.Web.UI.EventsView", "SitefinityContentList"},
@@ -1117,6 +1126,8 @@ public class PagesInfo
     public bool ParentTemplateIsNullOrMigrated { get; set; }
 
     public string PageUrl { get; set; }
+
+    public string SiteId { get; set; }
 }
 
 public class TemplateInfo
@@ -1199,7 +1210,7 @@ public class PagesReport
             {
                 Id = p.Id,
                 PageNodeId = p.NavigationNodeId,
-                Title = HttpUtility.HtmlEncode(p.NavigationNode.Title),
+                Title = HttpUtility.HtmlEncode(p.NavigationNode.Title.GetString(CultureInfo.GetCultureInfo(p.Culture ?? string.Empty), true)),
                 Framework = TemplatesReport.GetFrameworkName((p as IRendererCommonData).Renderer, p.Template),
                 WidgetsCount = WidgetReport.GetWidgetsOnPageCount(pageManager, p),
                 CustomWidgetsCount = WidgetReport.GetCustomWidgetsOnPageCount(pageManager, p, p.Template?.Framework == PageTemplateFramework.Mvc),
@@ -1208,34 +1219,58 @@ public class PagesReport
                 Status = Enum.GetName(typeof(ContentLifecycleStatus), p.Status),
                 IsPublished = p.IsPublished(null),
                 PageUrl = GetEditPageUrl(p.NavigationNode, p.Culture),
-                ParentTemplateIsNullOrMigrated = TemplateInfo.GetParentTemplateIsMigrated(p.Template)
+                ParentTemplateIsNullOrMigrated = TemplateInfo.GetParentTemplateIsMigrated(p.Template),
+                SiteId = PagesReport.GetSiteId(p.NavigationNode)
             });
 
         this.PagesInfo = (sortExpression != null) ? pageInfos.ToList() : pageInfos.OrderByDescending(x => x.IsPublished).ToList();
     }
 
-    public PagesInfo GetPageInfo(Guid pageDataId)
+    public List<PagesInfo> GetPageInfo(Guid pageDataId)
     {
         var pageManager = PageManager.GetManager();
         pageManager.Provider.SuppressSecurityChecks = true;
+        var pageHierarchy = new List<PagesInfo>();
         var pageData = pageManager.GetPageData(pageDataId);
-        var pageInfo = new PagesInfo()
+        var pageNode = pageData.NavigationNode;
+        var pageCulture = pageData.Culture != null ? CultureInfo.GetCultureInfo(pageData.Culture) : null;
+        do
         {
-            Id = pageData.Id,
-            PageNodeId = pageData.NavigationNodeId,
-            Title = HttpUtility.HtmlEncode(pageData.NavigationNode.Title),
-            Framework = TemplatesReport.GetFrameworkName((pageData as IRendererCommonData).Renderer, pageData.Template),
-            WidgetsCount = WidgetReport.GetWidgetsOnPageCount(pageManager, pageData),
-            CustomWidgetsCount = WidgetReport.GetCustomWidgetsOnPageCount(pageManager, pageData, pageData.Template?.Framework == PageTemplateFramework.Mvc),
-            Language = pageData.Culture?.ToUpper(),
-            IsSplit = pageData.NavigationNode.LocalizationStrategy == Telerik.Sitefinity.Localization.LocalizationStrategy.Split,
-            Status = Enum.GetName(typeof(ContentLifecycleStatus), pageData.Status),
-            IsPublished = pageData.IsPublished(null),
-            PageUrl = GetEditPageUrl(pageData.NavigationNode, pageData.Culture),
-            ParentTemplateIsNullOrMigrated = TemplateInfo.GetParentTemplateIsMigrated(pageData.Template)
-        };
+            var pageInfo = new PagesInfo()
+            {
+                Id = pageData != null ? pageData.Id : Guid.Empty,
+                PageNodeId = pageNode.Id,
+                Title = HttpUtility.HtmlEncode(pageNode.Title.GetString(pageCulture, true)),
+                Framework = pageData != null && pageNode.NodeType == NodeType.Standard ? TemplatesReport.GetFrameworkName((pageData as IRendererCommonData).Renderer, pageData.Template) : pageNode.NodeType.ToString(),
+                WidgetsCount = pageData != null ? WidgetReport.GetWidgetsOnPageCount(pageManager, pageData) : 0,
+                CustomWidgetsCount = pageData != null ? WidgetReport.GetCustomWidgetsOnPageCount(pageManager, pageData, pageData.Template?.Framework == PageTemplateFramework.Mvc) : 0,
+                Language = pageData != null ? pageData.Culture?.ToUpper() : null,
+                IsSplit = pageNode.LocalizationStrategy == Telerik.Sitefinity.Localization.LocalizationStrategy.Split,
+                Status = pageData != null ? Enum.GetName(typeof(ContentLifecycleStatus), pageData.Status) : "Published",
+                IsPublished = pageData != null ? pageData.IsPublished(null) : true,
+                PageUrl = pageData != null ? GetEditPageUrl(pageNode, pageData.Culture) : string.Empty,
+                ParentTemplateIsNullOrMigrated = pageData != null ? TemplateInfo.GetParentTemplateIsMigrated(pageData.Template) : true,
+                SiteId = GetSiteId(pageNode)
+            };
+            pageHierarchy.Add(pageInfo);
+            pageNode = pageNode.Parent;
+            if (pageNode == null)
+                break;
+            pageData = pageNode.GetPageData(pageCulture);
+        }
+        while (pageNode != null && (pageData != null || pageNode.NodeType == NodeType.Group) && pageNode.Id != SiteInitializer.CurrentFrontendRootNodeId);
 
-        return pageInfo;
+        return pageHierarchy;
+    }
+
+    public static string GetSiteId(PageNode page)
+    {
+        if (page == null)
+            return null;
+
+        var multisiteContext = SystemManager.CurrentContext as MultisiteContext;
+        var site = multisiteContext.GetSiteBySiteMapRoot(page.RootNodeId);
+        return site?.Id.ToString();
     }
 
     public static string GetEditPageUrl(PageNode page, string cultureName = null)
@@ -1476,8 +1511,8 @@ public class TemplatesReport
     }
 
     internal static Dictionary<string, string> RendererNameMap = new Dictionary<string, string>()
-    { 
-        { "NetCore", "ASP.NET Core" }, 
-        { "NextJS", "Next.js" } 
+    {
+        { "NetCore", "ASP.NET Core" },
+        { "NextJS", "Next.js" }
     };
 }
