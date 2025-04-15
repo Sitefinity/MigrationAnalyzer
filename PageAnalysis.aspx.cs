@@ -31,6 +31,25 @@ namespace SitefinityWebApp
             this.runPageAnalysis.Click += RunPageAnalysis_Click;
             this.GetWidgetsInfo.Click += GetWidgetsInfo_Click;
 
+            if (Request.Form["LanguageDropDown"] != null)
+            {
+                SystemManager.CurrentContext.Culture = CultureInfo.GetCultureInfo(Request.Form["LanguageDropDown"]);
+            }
+
+            // Update visibility of btnSearchClear based on the search value
+            var clearButton = this.searchSection.FindControl("btnSearchClear") as Button;
+            if (clearButton != null)
+            {
+                if (!string.IsNullOrWhiteSpace(this.txtSearch.Value))
+                {
+                    clearButton.Style["display"] = "block";
+                }
+                else
+                {
+                    clearButton.Style["display"] = "none";
+                }
+            }
+
             if (!Page.IsPostBack)
             {
                 var multisiteContext = SystemManager.CurrentContext as MultisiteContext;
@@ -40,6 +59,20 @@ namespace SitefinityWebApp
                 this.SitesDropDown.SelectedIndex = allSites.FindIndex(s => s.Id == defaultSite.Id);
                 this.SitesDropDown.DataBind();
                 this.siteSelection.SelectedIndex = 1;
+
+                var allSystemLanguages = SystemManager.CurrentContext.SystemCultures;
+                //var allLanguagesForCurrentSite = SystemManager.CurrentContext.CurrentSite.Cultures;                
+                if (allSystemLanguages.Count() > 1)
+                {
+                    var defaultCulture = SystemManager.CurrentContext.CurrentSite.DefaultCulture;
+                    this.LanguageDropDown.DataSource = allSystemLanguages;
+                    this.LanguageDropDown.SelectedIndex = allSystemLanguages.ToList<CultureInfo>().FindIndex(c => c.Name == defaultCulture.Name);
+                    this.LanguageDropDown.DataBind();
+                }
+                else
+                {
+                    this.languageSection.Visible = false;
+                }
 
                 var siteMapRootNodeId = defaultSite?.SiteMapRootNodeId;
                 this.SetUpTemplatesScreen(siteMapRootNodeId, this.siteSelection.SelectedValue);
@@ -58,10 +91,11 @@ namespace SitefinityWebApp
 
         public void RunTemplateAnalysis_Click(object sender, EventArgs e)
         {
+            if (sender != null)
+                this.txtSearch.Value = string.Empty;
             var siteMapRootNodeId = Request.Form["SitesDropDown"] ?? this.SitesDropDown.SelectedValue;
             var siteSelection = Request.Form["siteSelection"] ?? this.siteSelection.SelectedValue;
             Guid? siteId = string.IsNullOrEmpty(siteMapRootNodeId) ? Guid.Empty : Guid.Parse(siteMapRootNodeId);
-
             this.ShowHideGrids("Templates", false);
 
             this.SetUpTemplatesScreen(siteId, siteSelection);
@@ -73,18 +107,44 @@ namespace SitefinityWebApp
             this.ShowHideGrids(screenName, false);
         }
 
+        protected void btnSearch_Click(object sender, EventArgs e)
+        {
+            var clearButton = this.searchSection.FindControl("btnSearchClear") as Button;
+
+            if ((sender as Button).ID == "btnSearchClear")
+            {
+                this.txtSearch.Value = string.Empty;
+                if (clearButton != null)
+                {
+                    clearButton.Style["display"] = "none";
+                }
+            }
+            else if ((sender as Button).ID == "btnSearch")
+            {
+                if (!string.IsNullOrWhiteSpace(this.txtSearch.Value) && clearButton != null)
+                {
+                    clearButton.Style["display"] = "block";
+                }
+            }
+
+            this.refreshGrids();
+        }
+
         private void ShowHideGrids(string screenName, bool isDetails)
         {
             var allGrids = new List<GridView>() { this.pageList, this.singlePageList, this.templateList, this.templateHierarchyList, this.widgetDetailsGrid, this.AllWidgets, this.singleWidgetList };
             allGrids.ForEach(grid => { grid.Visible = false; });
 
-            var allScreenSpecificElements = new List<System.Web.UI.Control>() { this.backButton, this.siteSelection, this.pagesInfoAlert, this.templatesInfoAlert,
+            var allScreenSpecificElements = new List<System.Web.UI.Control>() { this.backButton, this.siteSelection, this.languageSection, this.pagesInfoAlert, this.templatesInfoAlert,
             this.allWidgetsGridTitle, this.allTemplatesGridTitle, this.allPagesGridTitle };
             allScreenSpecificElements.ForEach(element => { element.Visible = false; });
 
             this.backButton.Attributes.Add("sf-screenViewName", screenName);
+            this.txtSearch.Attributes["placeholder"] = screenName == "Widgets" ? "Search by name" : "Search by title";
+            //this.btnSearch.Text = "Search";
             if (!isDetails)
             {
+                this.searchSection.Visible = true;
                 this.reportHeader.Text = screenName;
                 this.templateList.Attributes["WidgetKey"] = string.Empty;
                 this.templateList.Attributes["PageId"] = string.Empty;
@@ -99,11 +159,13 @@ namespace SitefinityWebApp
                     case "Templates":
                         this.templateList.Visible = true;
                         this.siteSelection.Visible = true;
+                        this.languageSection.Visible = SystemManager.CurrentContext.SystemCultures.Count() > 1;
                         this.templatesInfoAlert.Visible = true;
                         break;
                     case "Pages":
                         this.pageList.Visible = true;
                         this.pagesInfoAlert.Visible = true;
+                        this.languageSection.Visible = SystemManager.CurrentContext.SystemCultures.Count() > 1;
                         break;
                     case "Widgets":
                         this.AllWidgets.Visible = true;
@@ -112,6 +174,7 @@ namespace SitefinityWebApp
             }
             else
             {
+                this.searchSection.Visible = false;
                 this.backButton.Text = "< Back to all " + screenName.ToLower();
                 this.backButton.Visible = true;
                 switch (screenName)
@@ -149,7 +212,8 @@ namespace SitefinityWebApp
             this.reportHeader.Text = screenName;
 
             var templatesReport = new TemplatesReport();
-            templatesReport.PopulateTemplatesInfo(siteMapRootNodeId, siteSelection, null, "DESC", 0, this.templateList.PageSize);
+            var filterArgs = new FilterArgs() { Take = this.templateList.PageSize, SortDirection = "DESC", SearchExpression = this.txtSearch.Value };
+            templatesReport.PopulateTemplatesInfo(siteMapRootNodeId, siteSelection, filterArgs);
 
             this.templatesInfoLiteral.Text = $"<b>Templates count</b> ASP.NET Core: {templatesReport.NetCoreTemplatesCount}, Next.js: {templatesReport.NextJsTemplatesCount}, MVC: {templatesReport.MvcTemplatesCount}, " +
                 $"Web Forms: {templatesReport.WebFormsTemplatesCount}, " +
@@ -166,13 +230,16 @@ namespace SitefinityWebApp
         {
             var screenName = "Pages";
             var selectedSiteId = Request.Form["SitesDropDown"];
+            if (sender != null)
+                this.txtSearch.Value = string.Empty;
             this.reportHeader.Text = screenName;
             var pagesReport = new PagesReport();
-            pagesReport.PopulatePagesInfo(selectedSiteId, null, null, 0, this.pageList.PageSize, null);
+            var filterArgs = new FilterArgs() { Take = this.pageList.PageSize, SearchExpression = (this.txtSearch.Value) };
+            pagesReport.PopulatePagesInfo(selectedSiteId, filterArgs, null);
 
             this.pagesInfo.Text = $"<b>Pages count:</b> Pages: {pagesReport.StandardPagesCount}, Translations: {pagesReport.TotalPageDataCount}";
 
-            this.pageList.VirtualItemCount = pagesReport.TotalPageDataCount;
+            this.pageList.VirtualItemCount = pagesReport.FilteredPageDataCount;
             this.pageList.PageIndex = 0;
             this.pageList.Columns[7].Visible = true;
             this.pageList.DataSource = pagesReport.PagesInfo;
@@ -188,8 +255,15 @@ namespace SitefinityWebApp
 
             this.reportHeader.Text = screenName;
 
+            if (sender != null)
+                this.txtSearch.Value = string.Empty;
+
             var widgetReport = new WidgetReport();
-            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, take: this.AllWidgets.PageSize);
+            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, filterArgs: new FilterArgs()
+            {
+                Take = this.AllWidgets.PageSize,
+                SearchExpression = this.txtSearch.Value
+            });
 
             this.AllWidgets.DataSource = widgetReport.AllWidgets;
             this.AllWidgets.PageIndex = 0;
@@ -204,13 +278,17 @@ namespace SitefinityWebApp
         {
             var gridView = sender as GridView;
             var pageSize = gridView.PageSize;
-            var skip = e.NewPageIndex * pageSize;
             var selectedSiteId = Request.Form["SitesDropDown"];
-            var sortExpression = this.AllWidgets.Attributes["SortExpression"];
-            var sortDirection = this.AllWidgets.Attributes["SortDirection"];
 
             var widgetReport = new WidgetReport();
-            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, skip: skip, take: pageSize, sortExpression: sortExpression, sortDirection: sortDirection);
+            var filterArgs = new FilterArgs()
+            {
+                Skip = e.NewPageIndex * pageSize,
+                Take = pageSize,
+                SortExpression = this.AllWidgets.Attributes["SortExpression"],
+                SortDirection = this.AllWidgets.Attributes["SortDirection"]
+            };
+            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, filterArgs: filterArgs);
 
             this.AllWidgets.DataSource = widgetReport.AllWidgets;
             this.AllWidgets.PageIndex = e.NewPageIndex;
@@ -238,8 +316,15 @@ namespace SitefinityWebApp
 
             if (string.IsNullOrEmpty(widgetKey)) // is in main pages screen or in template details screen
             {
-                pagesReport.PopulatePagesInfo(selectedSiteId, e.SortExpression, sortDirection, 0, gridView.PageSize, nullableTemplateId);
-                this.pageList.VirtualItemCount = pagesReport.TotalPageDataCount;
+                var filterArgs = new FilterArgs()
+                {
+                    Take = gridView.PageSize,
+                    SortExpression = e.SortExpression,
+                    SortDirection = sortDirection,
+                    SearchExpression = this.txtSearch.Value
+                };
+                pagesReport.PopulatePagesInfo(selectedSiteId, filterArgs, nullableTemplateId);
+                this.pageList.VirtualItemCount = pagesReport.FilteredPageDataCount;
                 this.pageList.DataSource = pagesReport.PagesInfo;
             }
             else if (!string.IsNullOrEmpty(widgetKey)) // is in details widget screen
@@ -284,8 +369,9 @@ namespace SitefinityWebApp
 
             if (string.IsNullOrEmpty(widgetKey))
             {
-                pagesReport.PopulatePagesInfo(selectedSiteId, sortExpression, sortDirection, skip, pageSize, nullableTemplateId);
-                this.pageList.VirtualItemCount = pagesReport.TotalPageDataCount;
+                var filterArgs = new FilterArgs() { Skip = skip, Take = pageSize, SortDirection = sortDirection, SortExpression = sortExpression, SearchExpression = this.txtSearch.Value };
+                pagesReport.PopulatePagesInfo(selectedSiteId, filterArgs, nullableTemplateId);
+                this.pageList.VirtualItemCount = pagesReport.FilteredPageDataCount;
                 this.pageList.DataSource = pagesReport.PagesInfo;
             }
             else
@@ -318,7 +404,8 @@ namespace SitefinityWebApp
             var widgetFramework = this.templateList.Attributes["WidgetFramework"];
             if (string.IsNullOrEmpty(widgetKey))
             {
-                templatesReport.PopulateTemplatesInfo(siteId, siteSelection, e.SortExpression, sortDirection, 0, gridView.PageSize);
+                var filterArgs = new FilterArgs() { SortExpression = e.SortExpression, SortDirection = sortDirection, Take = gridView.PageSize, SearchExpression = this.txtSearch.Value };
+                templatesReport.PopulateTemplatesInfo(siteId, siteSelection, filterArgs);
                 this.templateList.VirtualItemCount = templatesReport.TotalTemplatesCount;
                 this.templateList.DataSource = templatesReport.TemplatesInfo;
             }
@@ -361,7 +448,8 @@ namespace SitefinityWebApp
             var widgetFramework = this.templateList.Attributes["WidgetFramework"];
             if (string.IsNullOrEmpty(widgetKey))
             {
-                templatesReport.PopulateTemplatesInfo(siteId, siteSelection, sortExpression, sortDirection, skip, pageSize);
+                var filterArgs = new FilterArgs() { Skip = skip, Take = pageSize, SortExpression = sortExpression, SortDirection = sortDirection, SearchExpression = this.txtSearch.Value };
+                templatesReport.PopulateTemplatesInfo(siteId, siteSelection, filterArgs);
                 this.templateList.VirtualItemCount = templatesReport.TotalTemplatesCount;
                 this.templateList.DataSource = templatesReport.TemplatesInfo;
             }
@@ -390,10 +478,11 @@ namespace SitefinityWebApp
             var parentTemplateId = Guid.Parse(arg[0]);
 
             var pagesReport = new PagesReport();
-            pagesReport.PopulatePagesInfo(selectedSiteId, null, null, 0, this.pageList.PageSize, parentTemplateId);
+            var pageFlterArgs = new FilterArgs() { Take = this.pageList.PageSize };
+            pagesReport.PopulatePagesInfo(selectedSiteId, pageFlterArgs, parentTemplateId);
             this.pageList.Attributes["TemplateId"] = arg[0];
             this.pageList.Attributes["WidgetKey"] = string.Empty;
-            this.pageList.VirtualItemCount = pagesReport.TotalPageDataCount;
+            this.pageList.VirtualItemCount = pagesReport.FilteredPageDataCount;
             this.pageList.PageIndex = 0;
             this.pageList.DataSource = pagesReport.PagesInfo;
             this.pageList.DataBind();
@@ -405,7 +494,8 @@ namespace SitefinityWebApp
             this.templateHierarchyList.DataBind();
 
             var widgetReport = new WidgetReport();
-            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, parentTemplateId, null, WidgetLocationMode.TemplateOnly, take: this.AllWidgets.PageSize);
+            var widgetFilterArgs = new FilterArgs() { Take = this.AllWidgets.PageSize };
+            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, parentTemplateId, null, WidgetLocationMode.TemplateOnly, widgetFilterArgs);
 
             this.AllWidgets.Attributes["TemplateId"] = arg[0];
             this.AllWidgets.Attributes["PageId"] = string.Empty;
@@ -452,7 +542,8 @@ namespace SitefinityWebApp
             this.templateList.DataBind();
 
             var widgetReport = new WidgetReport();
-            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, null, pageId, WidgetLocationMode.PageOnly, take: this.AllWidgets.PageSize);
+            var filterArgs = new FilterArgs() { Take = this.AllWidgets.PageSize };
+            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, null, pageId, WidgetLocationMode.PageOnly, filterArgs: filterArgs);
 
             this.AllWidgets.Attributes["PageId"] = arg[0];
             this.AllWidgets.Attributes["TemplateId"] = string.Empty;
@@ -505,8 +596,18 @@ namespace SitefinityWebApp
 
             this.ShowHideGrids("Widgets", true);
         }
-
         protected void SitesDropDown_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            this.refreshGrids();
+        }
+
+        protected void LanguageDropDown_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            SystemManager.CurrentContext.Culture = CultureInfo.GetCultureInfo((sender as DropDownList).SelectedValue);
+            this.refreshGrids();
+        }
+
+        protected void refreshGrids()
         {
             var screenName = this.backButton.Attributes["sf-screenViewName"];
 
@@ -544,7 +645,14 @@ namespace SitefinityWebApp
             }
 
             var widgetReport = new WidgetReport();
-            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, templateId, pageId, widgetLocation, take: this.AllWidgets.PageSize, sortExpression: e.SortExpression, sortDirection: sortDirection);
+            var filterArgs = new FilterArgs()
+            {
+                Take = this.AllWidgets.PageSize,
+                SortExpression = e.SortExpression,
+                SortDirection = sortDirection,
+                SearchExpression = this.txtSearch.Value
+            };
+            widgetReport.PopulateBasicWidgetInformation(selectedSiteId, templateId, pageId, widgetLocation, filterArgs);
 
             this.AllWidgets.Attributes["SortExpression"] = e.SortExpression;
             this.AllWidgets.Attributes["SortDirection"] = sortDirection;
@@ -574,7 +682,7 @@ public class WidgetReport
 
     public int TotalDistinctWidgetsCount { get; set; }
 
-    public void PopulateBasicWidgetInformation(string selectedSiteId, Guid? templateId = null, Guid? pageId = null, WidgetLocationMode locationMode = WidgetLocationMode.Both, int skip = 0, int take = 1000, string sortExpression = null, string sortDirection = null)
+    public void PopulateBasicWidgetInformation(string selectedSiteId, Guid? templateId = null, Guid? pageId = null, WidgetLocationMode locationMode = WidgetLocationMode.Both, FilterArgs filterArgs = null)
     {
         var pageManager = PageManager.GetManager();
         pageManager.Provider.SuppressSecurityChecks = true;
@@ -609,7 +717,7 @@ public class WidgetReport
             filteredTemplateControlData = Enumerable.Empty<TemplateControl>().AsQueryable();
         }
 
-        this.PopulateWidgetsInfo(filteredPageControlData, filteredTemplateControlData, skip, take, sortExpression, sortDirection);
+        this.PopulateWidgetsInfo(filteredPageControlData, filteredTemplateControlData, filterArgs);
     }
 
     public static List<WidgetDetails> GetDetailWidgetsInfo(string key, bool isOnPage, bool isMvc)
@@ -839,7 +947,7 @@ public class WidgetReport
         return count;
     }
 
-    private void PopulateWidgetsInfo(IQueryable<PageControl> pageControlData, IQueryable<TemplateControl> templateControlData, int skip = 0, int take = 1000, string sortExpression = null, string sortDirection = null)
+    private void PopulateWidgetsInfo(IQueryable<PageControl> pageControlData, IQueryable<TemplateControl> templateControlData, FilterArgs filterArgs)
     {
         var rendererWidgersOnTemplates = templateControlData
             .Where(cd => !cd.ObjectType.StartsWith("Telerik.Sitefinity.Mvc") && !cd.ObjectType.StartsWith("Telerik.Sitefinity.Frontend"))
@@ -880,25 +988,25 @@ public class WidgetReport
             .GroupBy(cd => cd.Caption)
             .Select(g => new WidgetInfo(g.Key, g.First().ObjectType, "MVC", g.Count(), 0) { FirstIdInGroup = g.First().Id, LocationType = "Page" }).ToList();
 
-        var allMvcWidgets = this.MergeWidgets(this.MvcWidgetsOnTemplates, this.MvcWidgetsOnPages);
-        var allWebFormsWidgets = this.MergeWidgets(this.WebFormsWidgetsOnTemplates, this.WebFormsWidgetsOnPages);
-        var allRendererWidgets = this.MergeWidgets(rendererWidgersOnTemplates, rendererWidgetsOnPages);
+        var allMvcWidgets = this.MergeWidgets(this.MvcWidgetsOnTemplates, this.MvcWidgetsOnPages).Where(w => string.IsNullOrEmpty(filterArgs.SearchExpression) || w.Title != null && w.Title.IndexOf(filterArgs.SearchExpression, StringComparison.OrdinalIgnoreCase) >= 0);
+        var allWebFormsWidgets = this.MergeWidgets(this.WebFormsWidgetsOnTemplates, this.WebFormsWidgetsOnPages).Where(w => string.IsNullOrEmpty(filterArgs.SearchExpression) || w.Title != null && w.Title.IndexOf(filterArgs.SearchExpression, StringComparison.OrdinalIgnoreCase) >= 0);
+        var allRendererWidgets = this.MergeWidgets(rendererWidgersOnTemplates, rendererWidgetsOnPages).Where(w => string.IsNullOrEmpty(filterArgs.SearchExpression) || w.Title != null && w.Title.IndexOf(filterArgs.SearchExpression, StringComparison.OrdinalIgnoreCase) >= 0);
         this.TotalDistinctWidgetsCount = allMvcWidgets.Count() + allWebFormsWidgets.Count() + allRendererWidgets.Count();
-        if (sortExpression != null)
+        if (filterArgs.SortExpression != null)
         {
             string fullSortExpression = null;
-            if (!string.IsNullOrWhiteSpace(sortExpression))
+            if (!string.IsNullOrWhiteSpace(filterArgs.SortExpression))
             {
-                fullSortExpression = sortDirection == "DESC" ? $"{sortExpression} DESC" : sortExpression;
+                fullSortExpression = filterArgs.SortDirection == "DESC" ? $"{filterArgs.SortExpression} DESC" : filterArgs.SortExpression;
             }
 
             this.AllWidgets = allWebFormsWidgets.Concat(allMvcWidgets).Concat(allRendererWidgets).AsQueryable().SortBy(fullSortExpression)
-                .Skip(skip).Take(take).ToList();
+                .Skip(filterArgs.Skip).Take(filterArgs.Take).ToList();
         }
         else
         {
             this.AllWidgets = allWebFormsWidgets.Concat(allMvcWidgets).Concat(allRendererWidgets).OrderByDescending(w => w.CountOnPages).ThenByDescending(w => w.CountOnTemplates)
-                .Skip(skip).Take(take).ToList();
+                .Skip(filterArgs.Skip).Take(filterArgs.Take).ToList();
         }
         this.AjustRendererWidgetForDynamicWidgets();
     }
@@ -1161,11 +1269,13 @@ public class PagesReport
 {
     public int StandardPagesCount { get; set; }
 
+    public int FilteredPageDataCount { get; set; }
+
     public int TotalPageDataCount { get; set; }
 
     public IList<PagesInfo> PagesInfo { get; set; }
 
-    public void PopulatePagesInfo(string selectedSiteId, string sortExpression = null, string sortDirection = null, int skip = 0, int take = 100, Guid? templateId = null)
+    public void PopulatePagesInfo(string selectedSiteId, FilterArgs filterArgs, Guid? templateId = null)
     {
         var rootId = DataExtensions.AppSettings.BackendRootNodeId;
 
@@ -1178,9 +1288,9 @@ public class PagesReport
         var standardPages = pageNodes.Where(p => p.NodeType == NodeType.Standard);
         this.StandardPagesCount = standardPages.Count();
         string fullSortExpression = null;
-        if (!string.IsNullOrWhiteSpace(sortExpression))
+        if (!string.IsNullOrWhiteSpace(filterArgs.SortExpression))
         {
-            fullSortExpression = sortDirection == "DESC" ? $"{sortExpression} DESC" : sortExpression;
+            fullSortExpression = filterArgs.SortDirection == "DESC" ? $"{filterArgs.SortExpression} DESC" : filterArgs.SortExpression;
         }
 
         IQueryable<PageData> filteredPages = pageManager
@@ -1191,12 +1301,22 @@ public class PagesReport
             //filteredPages = pageManager.GetTemplate(templateId.Value).Pages();
             filteredPages = filteredPages.Where(p => p.Template != null && p.Template.Id == templateId.Value);
 
+        var currentCulture = SystemManager.CurrentContext.Culture.Name;
+        var defaultCulture = SystemManager.CurrentContext.CurrentSite.DefaultCulture.Name;
         this.TotalPageDataCount = filteredPages.Count();
 
+        filteredPages = filteredPages.Where(p =>
+        p.Culture == currentCulture || (string.IsNullOrEmpty(p.Culture) && p.NavigationNode.Title != null));
+
+        filteredPages = !string.IsNullOrEmpty(filterArgs.SearchExpression) ? filteredPages.Where(p => p.NavigationNode.Title != null &&
+        p.NavigationNode.Title.ToLower().Contains(filterArgs.SearchExpression.ToLower())) : filteredPages;
+
+        this.FilteredPageDataCount = filteredPages.Count();
+
         IQueryable<PageData> sortedPageData;
-        if (sortExpression == "Template.Framework")
+        if (filterArgs.SortExpression == "Template.Framework")
         {
-            if (sortDirection == "DESC" || sortDirection == null)
+            if (filterArgs.SortDirection == "DESC" || filterArgs.SortDirection == null)
                 sortedPageData = filteredPages.OrderByDescending(p => (int)p.Template.Framework);
             else
                 sortedPageData = filteredPages.OrderBy(p => (int)p.Template.Framework);
@@ -1205,12 +1325,14 @@ public class PagesReport
         {
             sortedPageData = filteredPages.SortBy(fullSortExpression);
         }
-        var pageInfos = sortedPageData.Skip(skip).Take(take).ToList()
+
+        var pageInfos = sortedPageData
+            .Skip(filterArgs.Skip).Take(filterArgs.Take).ToList()
             .Select(p => new PagesInfo()
             {
                 Id = p.Id,
                 PageNodeId = p.NavigationNodeId,
-                Title = HttpUtility.HtmlEncode(p.NavigationNode.Title.GetString(CultureInfo.GetCultureInfo(p.Culture ?? string.Empty), true)),
+                Title = HttpUtility.HtmlEncode(p.NavigationNode.Title),
                 Framework = TemplatesReport.GetFrameworkName((p as IRendererCommonData).Renderer, p.Template),
                 WidgetsCount = WidgetReport.GetWidgetsOnPageCount(pageManager, p),
                 CustomWidgetsCount = WidgetReport.GetCustomWidgetsOnPageCount(pageManager, p, p.Template?.Framework == PageTemplateFramework.Mvc),
@@ -1223,7 +1345,12 @@ public class PagesReport
                 SiteId = PagesReport.GetSiteId(p.NavigationNode)
             });
 
-        this.PagesInfo = (sortExpression != null) ? pageInfos.ToList() : pageInfos.OrderByDescending(x => x.IsPublished).ToList();
+        this.PagesInfo = (filterArgs.SortExpression != null) ? pageInfos.ToList() : pageInfos.OrderByDescending(x => x.IsPublished).ToList();
+    }
+
+    private static string GetTitleInCulture(PageData p)
+    {
+        return HttpUtility.HtmlEncode(p.NavigationNode.Title);
     }
 
     public List<PagesInfo> GetPageInfo(Guid pageDataId)
@@ -1309,7 +1436,7 @@ public class TemplatesReport
 
     public IList<TemplateInfo> TemplatesInfo { get; set; }
 
-    public void PopulateTemplatesInfo(Guid? siteMapRootNodeId, string siteSelection, string sortExpression = null, string sortDirection = null, int skip = 0, int take = 100)
+    public void PopulateTemplatesInfo(Guid? siteMapRootNodeId, string siteSelection, FilterArgs filterArgs)
     {
         var rootId = DataExtensions.AppSettings.BackendRootNodeId;
 
@@ -1333,8 +1460,6 @@ public class TemplatesReport
             templatesPerSite = frontendTemplates;
         }
 
-        this.TotalTemplatesCount = templatesPerSite.Count();
-
         this.WebFormsTemplatesCount = templatesPerSite
             .Where(t => t.Framework == PageTemplateFramework.WebForms).Count();
         this.HybridTemplatesCount = templatesPerSite
@@ -1346,9 +1471,18 @@ public class TemplatesReport
         this.NextJsTemplatesCount = templatesPerSite
             .Where(t => t.Renderer == "NextJS").Count();
 
-        IQueryable<PageTemplate> sortedTemplates = SortTemplates(sortExpression, sortDirection, templatesPerSite);
+        var defaultCulture = SystemManager.CurrentContext.CurrentSite.DefaultCulture.Name;
+        var currentCulture = SystemManager.CurrentContext.Culture.Name;
+        templatesPerSite = templatesPerSite.Where(t =>
+        t.Culture == currentCulture || (string.IsNullOrEmpty(t.Culture) && currentCulture == defaultCulture)); // will display templates with no translations only in the default culture
 
-        this.TemplatesInfo = sortedTemplates.Skip(skip).Take(take).ToList().Select(x => new TemplateInfo()
+        var filteredTemplates = !string.IsNullOrEmpty(filterArgs.SearchExpression) ? templatesPerSite.Where(t => t.Title != null && t.Title.ToLower().Contains(filterArgs.SearchExpression.ToLower())) : templatesPerSite;
+
+        this.TotalTemplatesCount = filteredTemplates.Count();
+
+        IQueryable<PageTemplate> sortedTemplates = SortTemplates(filterArgs.SortExpression, filterArgs.SortDirection, filteredTemplates);
+
+        this.TemplatesInfo = sortedTemplates.Skip(filterArgs.Skip).Take(filterArgs.Take).ToList().Select(x => new TemplateInfo()
         {
             Id = x.Id,
             Name = x.Name,
@@ -1515,4 +1649,17 @@ public class TemplatesReport
         { "NetCore", "ASP.NET Core" },
         { "NextJS", "Next.js" }
     };
+}
+
+public class FilterArgs
+{
+    public int Skip { set; get; } = 0;
+    public int Take { get; set; } = 1000;
+    public string SearchExpression { get; set; }
+
+    public string SortExpression { get; set; }
+
+    public string SortDirection { get; set; }
+
+    public string Culture { get; set; }
 }

@@ -196,6 +196,29 @@
         .sf-main-header {
             min-height: 60px;
         }
+
+        .sf-search {
+            display: flex;
+        }
+
+        .sf-search__input-wrapper {
+            position: relative;
+            flex-basis: 340px;
+        }
+
+        .sf-search__input {
+            padding-right: 25px;
+        }
+
+        .sf-search__input::placeholder {
+            color: #6c757d;
+        }
+
+        .sf-search__clear-button {
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
     </style>
 </head>
 <body>
@@ -232,7 +255,26 @@
                         <asp:ListItem Value="none">Not shared with any site</asp:ListItem>
                     </asp:RadioButtonList>
                 </div>
-                
+
+                <div class="alert alert-primary mb-4" runat="server" id="templatesInfoAlert"><asp:Literal ID="templatesInfoLiteral" runat="server"></asp:Literal></div>
+  
+                <div class="alert alert-primary mb-4"  runat="server" id="pagesInfoAlert"><asp:Literal ID="pagesInfo" runat="server"></asp:Literal></div>
+
+                <div class="mb-4 row">
+                    <div id="searchSection" runat="server" class="sf-search col">    
+                        <div class="sf-search__input-wrapper">
+                            <input runat="server" class="form-control sf-search__input" type="text" placeholder ="Search by title" id="txtSearch">
+                            <div class="input-group-append sf-search__clear-button">
+                                <asp:Button ID="btnSearchClear" runat="server" OnClick="btnSearch_Click" Text="&times;" CssClass ="btn bg-transparent close fw-bold" />
+                            </div>
+                        </div>
+                         <asp:Button ID="btnSearch" runat="server" OnClick="btnSearch_Click" Text="Search" CssClass ="btn btn-secondary sf-search__button ms-2" />
+                     </div>
+                     <div runat="server" id="languageSection" class="col d-inline-flex align-items-center justify-content-end">
+                        <div class="me-2 d-inline-flex flex-shrink-0">Select translation</div>
+                        <asp:DropDownList ID="LanguageDropDown" CssClass="dropdown form-control w-auto sf-dropdown" runat="server" AutoPostBack ="true"  DataValueField="Name" DataTextField="DisplayName" OnSelectedIndexChanged="LanguageDropDown_SelectedIndexChanged"></asp:DropDownList>
+                    </div>
+                </div>
                     <div>
                         <asp:GridView ID="templateHierarchyList" runat="server" GridLines="Both" PagerStyle-CssClass="sf-pager" PageSize="10" AllowCustomPaging="true" AllowPaging="false" AllowSorting="false"
                             OnSorting="Templates_Sorting" OnPageIndexChanging="Templates_PageIndexChanging"  OnRowCommand="TemplateHierarchy_Click"
@@ -322,8 +364,7 @@
                 </div>
         
         <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="allTemplatesGridTitle"></asp:Label></h2>
-        <div class="alert alert-primary mb-4" runat="server" id="templatesInfoAlert"><asp:Literal ID="templatesInfoLiteral" runat="server"></asp:Literal></div>
-        
+              
         <div>
             <asp:GridView ID="templateList" runat="server" GridLines="Both" PagerStyle-CssClass="sf-pager" PageSize="10" AllowCustomPaging="true" AllowPaging="true" AllowSorting="true"
                 OnSorting="Templates_Sorting" OnPageIndexChanging="Templates_PageIndexChanging"  OnRowCommand="TemplateHierarchy_Click"
@@ -365,7 +406,6 @@
 
                 
         <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="allPagesGridTitle"></asp:Label></h2>
-        <div class="alert alert-primary mb-4"  runat="server" id="pagesInfoAlert"><asp:Literal ID="pagesInfo" runat="server"></asp:Literal></div>
         <div>
 
         <asp:GridView ID="pageList" runat="server" GridLines="Both" AllowSorting="true" PagerStyle-CssClass="sf-pager" PageSize="15" AllowCustomPaging="true" AllowPaging="true" 
@@ -517,6 +557,16 @@
                     currActive.classList.remove(ACTIVE_CLASS);
                 }
             }
+
+            var searchInput = document.getElementById("txtSearch");
+
+            // Activate search when enter is clicked
+            searchInput.addEventListener("keypress", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    document.getElementById("btnSearch").click();
+                }
+            });
         });
     </script>
 </body>
