@@ -16,7 +16,7 @@ Sitefinity Migration Analysis Tool is covered under the standard Sitefinity CMS 
 
 Sitefinity Migration Analysis Tool is a set of source code files which you need to add to your Sitefinity project.
 
-To learn how to install and use it, see Sitefinity documentation's [Sitefinity Migration Analysis Tool](https://www.progress.com/documentation/sitefinity-cms/migration-assistant) » _Installation_.
+To learn how to install and use it, see Sitefinity documentation's [Sitefinity Migration Analysis Tool](https://www.progress.com/documentation/sitefinity-cms/sitefinity-migration-analyzer) » _Installation_.
 
 
 # License
