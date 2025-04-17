@@ -47,6 +47,9 @@
             width: 220px;
             background-color: #F8F9FA;
             border-right: 1px solid #DEE2E6;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
         }
 
         .sf-sidebar ul {
@@ -91,6 +94,14 @@
             width: 100%;
             text-align: left;
             color: inherit;
+        }
+
+        .sf-sidebar__footer {
+            border: 1px solid #DEE2E6;
+            border-radius: 6px;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
         }
 
         .sf-radio-group tbody {
@@ -238,12 +249,16 @@
         </section>
   
         <section class="sf-section container-fluid ps-0">
-            <aside class="sf-sidebar pt-4 ps-3">
+            <aside class="sf-sidebar py-4 ps-3">
                 <ul>
                     <li><asp:Button ID="runTemplateAnalysis" runat="server" Text ="Templates" CssClass="sf-sidebar__buton" /></li>
                     <li><asp:Button ID="runPageAnalysis" runat="server" Text ="Pages" CssClass="sf-sidebar__buton" /></li>
                     <li><asp:Button ID="GetWidgetsInfo" runat="server" Text ="Widgets" CssClass="sf-sidebar__buton" /></li>
                 </ul>
+                <div class="me-3 mt-auto p-3 sf-sidebar__footer">
+                    <h6 class="mb-0">How to</h6>
+                    <a href="https://www.progress.com/documentation/sitefinity-cms/migrate-your-project-with-cli" class="text-truncate" title="Migrate your project">Migrate your project</a>
+                </div>
             </aside>
             <main class="sf-main p-3 ps-5 w-100">
                 <asp:LinkButton runat="server" ID="backButton" OnClick="BackButton_Click" CssClass="d-inline-block mb-3" />
