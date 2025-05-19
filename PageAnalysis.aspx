@@ -22,10 +22,15 @@
     <link rel="stylesheet" href="/ResourcePackages/Bootstrap5/assets/dist/css/main.min.css" crossorigin="anonymous" onerror="bootstrapFallBack()" />
      <style>
         .sf-top-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
             min-height: 56px;
             box-shadow: 0 3px 5px #eee;
             position: relative;
-            z-index: 10;
+            z-index: 100;
+            background-color: #fff;
         }
         .sf-dropdown {
             -webkit-appearance: none;
@@ -44,12 +49,18 @@
         }
 
         .sf-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
             width: 220px;
             background-color: #F8F9FA;
             border-right: 1px solid #DEE2E6;
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            padding-top: 80px;
+            z-index: 10;
         }
 
         .sf-sidebar ul {
@@ -204,6 +215,11 @@
             text-decoration: none;
         }
 
+        .sf-main {
+            margin-left: 220px;
+            padding-top: 72px;
+        }
+
         .sf-main-header {
             min-height: 60px;
         }
@@ -249,7 +265,7 @@
         </section>
   
         <section class="sf-section container-fluid ps-0">
-            <aside class="sf-sidebar py-4 ps-3">
+            <aside class="sf-sidebar pb-4 ps-3">
                 <ul>
                     <li><asp:Button ID="runTemplateAnalysis" runat="server" Text ="Templates" CssClass="sf-sidebar__buton" /></li>
                     <li><asp:Button ID="runPageAnalysis" runat="server" Text ="Pages" CssClass="sf-sidebar__buton" /></li>
@@ -257,11 +273,11 @@
                 </ul>
                 <div class="me-3 mt-auto p-3 sf-sidebar__footer">
                     <h6 class="mb-0">How to</h6>
-                    <a href="https://www.progress.com/documentation/sitefinity-cms/migrate-your-project-with-cli" class="text-truncate" title="Migrate your project">Migrate your project</a>
+                    <a href="https://www.progress.com/documentation/sitefinity-cms/migrate-your-project-with-cli" class="text-truncate" title="Migrate your project" target="_blank">Migrate your project</a>
                 </div>
             </aside>
-            <main class="sf-main p-3 ps-5 w-100">
-                <asp:LinkButton runat="server" ID="backButton" OnClick="BackButton_Click" CssClass="d-inline-block mb-3" />
+            <main class="sf-main pe-3 pb-3 ps-5 w-100">
+                <asp:LinkButton runat="server" ID="backButton" OnClick="BackButton_Click" CssClass="d-inline-block my-3" />
                 <div class="sf-main-header d-flex align-items-center justify-content-between mb-3">
                     <h1 class="h2"><asp:Literal runat="server" ID="reportHeader"></asp:Literal></h1>
                     <asp:RadioButtonList CssClass="sf-radio-group" ID="siteSelection" runat="server" AutoPostBack="true" OnSelectedIndexChanged="RunTemplateAnalysis_Click">
