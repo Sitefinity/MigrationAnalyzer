@@ -60,6 +60,15 @@ namespace SitefinityWebApp
         protected global::System.Web.UI.WebControls.Button GetWidgetsInfo;
 
         /// <summary>
+        /// runFormsAnalysis control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button runFormsAnalysis;
+
+        /// <summary>
         /// backButton control.
         /// </summary>
         /// <remarks>
@@ -123,6 +132,24 @@ namespace SitefinityWebApp
         protected global::System.Web.UI.WebControls.Literal pagesInfo;
 
         /// <summary>
+        /// formsInfoAlert control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl formsInfoAlert;
+
+        /// <summary>
+        /// formsInfoLiteral control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Literal formsInfoLiteral;
+
+        /// <summary>
         /// searchSection control.
         /// </summary>
         /// <remarks>
@@ -159,6 +186,15 @@ namespace SitefinityWebApp
         protected global::System.Web.UI.WebControls.Button btnSearch;
 
         /// <summary>
+        /// exportSection control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl exportSection;
+
+        /// <summary>
         /// languageSection control.
         /// </summary>
         /// <remarks>
@@ -177,31 +213,40 @@ namespace SitefinityWebApp
         protected global::System.Web.UI.WebControls.DropDownList LanguageDropDown;
 
         /// <summary>
-        /// templateHierarchyList control.
+        /// TemplateHierarchyListControl control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView templateHierarchyList;
+        protected global::System.Web.UI.WebControls.GridView TemplateHierarchyListControl;
 
         /// <summary>
-        /// singlePageList control.
+        /// SinglePageListControl control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView singlePageList;
+        protected global::System.Web.UI.WebControls.GridView SinglePageListControl;
 
         /// <summary>
-        /// singleWidgetList control.
+        /// SingleWidgetListControl control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView singleWidgetList;
+        protected global::System.Web.UI.WebControls.GridView SingleWidgetListControl;
+
+        /// <summary>
+        /// singleFormList control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.GridView singleFormList;
 
         /// <summary>
         /// allTemplatesGridTitle control.
@@ -213,13 +258,13 @@ namespace SitefinityWebApp
         protected global::System.Web.UI.WebControls.Label allTemplatesGridTitle;
 
         /// <summary>
-        /// templateList control.
+        /// TemplateListControl control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView templateList;
+        protected global::System.Web.UI.WebControls.GridView TemplateListControl;
 
         /// <summary>
         /// allPagesGridTitle control.
@@ -231,13 +276,13 @@ namespace SitefinityWebApp
         protected global::System.Web.UI.WebControls.Label allPagesGridTitle;
 
         /// <summary>
-        /// pageList control.
+        /// PageListControl control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView pageList;
+        protected global::System.Web.UI.WebControls.GridView PageListControl;
 
         /// <summary>
         /// allWidgetsGridTitle control.
@@ -249,31 +294,49 @@ namespace SitefinityWebApp
         protected global::System.Web.UI.WebControls.Label allWidgetsGridTitle;
 
         /// <summary>
-        /// AllWidgets control.
+        /// AllWidgetsControl control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView AllWidgets;
+        protected global::System.Web.UI.WebControls.GridView AllWidgetsControl;
 
         /// <summary>
-        /// WidgetDetailsHeader control.
+        /// fieldsInfoTitle control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label WidgetDetailsHeader;
+        protected global::System.Web.UI.WebControls.Label fieldsInfoTitle;
 
         /// <summary>
-        /// widgetDetailsGrid control.
+        /// fieldsList control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView widgetDetailsGrid;
+        protected global::System.Web.UI.WebControls.GridView fieldsList;
+
+        /// <summary>
+        /// allFormsTitle control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label allFormsTitle;
+
+        /// <summary>
+        /// formsList control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.GridView formsList;
 
         /// <summary>
         /// resourcesLinks control.

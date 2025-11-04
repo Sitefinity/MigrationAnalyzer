@@ -1,6 +1,5 @@
 ﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="PageAnalysis.aspx.cs" Inherits="SitefinityWebApp.PageAnalysis" Debug="true" %>
 <%@ Register Assembly="Telerik.Sitefinity" Namespace="Telerik.Sitefinity.Web.UI" TagPrefix="sf" %>
-
 <!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -270,6 +269,7 @@
                     <li><asp:Button ID="runTemplateAnalysis" runat="server" Text ="Templates" CssClass="sf-sidebar__buton" /></li>
                     <li><asp:Button ID="runPageAnalysis" runat="server" Text ="Pages" CssClass="sf-sidebar__buton" /></li>
                     <li><asp:Button ID="GetWidgetsInfo" runat="server" Text ="Widgets" CssClass="sf-sidebar__buton" /></li>
+                    <li><asp:Button ID="runFormsAnalysis" runat="server" Text ="Forms" CssClass="sf-sidebar__buton" /></li>
                 </ul>
                 <div class="me-3 mt-auto p-3 sf-sidebar__footer">
                     <h6 class="mb-0">How to</h6>
@@ -280,7 +280,7 @@
                 <asp:LinkButton runat="server" ID="backButton" OnClick="BackButton_Click" CssClass="d-inline-block my-3" />
                 <div class="sf-main-header d-flex align-items-center justify-content-between mb-3">
                     <h1 class="h2"><asp:Literal runat="server" ID="reportHeader"></asp:Literal></h1>
-                    <asp:RadioButtonList CssClass="sf-radio-group" ID="siteSelection" runat="server" AutoPostBack="true" OnSelectedIndexChanged="RunTemplateAnalysis_Click">
+                    <asp:RadioButtonList CssClass="sf-radio-group" ID="siteSelection" runat="server" AutoPostBack="true" OnSelectedIndexChanged="refreshGrids">
                         <asp:ListItem Value="all">All sites</asp:ListItem>
                         <asp:ListItem Value="current">This site</asp:ListItem>
                         <asp:ListItem Value="none">Not shared with any site</asp:ListItem>
@@ -290,6 +290,8 @@
                 <div class="alert alert-primary mb-4" runat="server" id="templatesInfoAlert"><asp:Literal ID="templatesInfoLiteral" runat="server"></asp:Literal></div>
   
                 <div class="alert alert-primary mb-4"  runat="server" id="pagesInfoAlert"><asp:Literal ID="pagesInfo" runat="server"></asp:Literal></div>
+                <div class="alert alert-primary mb-4" runat="server" id="formsInfoAlert"><asp:Literal ID="formsInfoLiteral" runat="server"></asp:Literal></div>
+  
 
                 <div class="mb-4 row">
                     <div id="searchSection" runat="server" class="sf-search col">    
@@ -300,84 +302,90 @@
                             </div>
                         </div>
                          <asp:Button ID="btnSearch" runat="server" OnClick="btnSearch_Click" Text="Search" CssClass ="btn btn-secondary sf-search__button ms-2" />
+                         <span id="exportSection" runat="server">
+                            <a id="exportLnk" title="Export in .csv" href="#" target="_blank" class="btn btn-outline-secondary ms-2 px-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                                </svg>
+                            </a>
+                        </span>
                      </div>
                      <div runat="server" id="languageSection" class="col d-inline-flex align-items-center justify-content-end">
                         <div class="me-2 d-inline-flex flex-shrink-0">Select translation</div>
                         <asp:DropDownList ID="LanguageDropDown" CssClass="dropdown form-control w-auto sf-dropdown" runat="server" AutoPostBack ="true"  DataValueField="Name" DataTextField="DisplayName" OnSelectedIndexChanged="LanguageDropDown_SelectedIndexChanged"></asp:DropDownList>
                     </div>
                 </div>
-                    <div>
-                        <asp:GridView ID="templateHierarchyList" runat="server" GridLines="Both" PagerStyle-CssClass="sf-pager" PageSize="10" AllowCustomPaging="true" AllowPaging="false" AllowSorting="false"
-                            OnSorting="Templates_Sorting" OnPageIndexChanging="Templates_PageIndexChanging"  OnRowCommand="TemplateHierarchy_Click"
-                            ShowHeaderWhenEmpty="True" EmptyDataText="No records found" AutoGenerateColumns="false" CssClass="table table-sm">
-                            <Columns>
-                                <asp:TemplateField HeaderText="Title" SortExpression="Title" >
-                                    <ItemTemplate>
-                                        <asp:LinkButton runat="server" ID="lnk" Enabled="true" Text='<%# Eval("Title")%>' 
-                                                CommandArgument='<%# Eval("Id") +";template;" + Eval("Title") ?? Eval("Name") %>' CommandName="GetDetails" />
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:BoundField DataField="Name" HeaderText="Template name" 
-                                    InsertVisible="False" ReadOnly="True" SortExpression="Name"  />
-                                <asp:BoundField DataField="Id" HeaderText="ID" 
-                                    InsertVisible="False" ReadOnly="True" SortExpression="Id"  />
-                                
-                                <asp:BoundField DataField="Framework" HeaderText="Framework" 
-                                    InsertVisible="False" ReadOnly="True" SortExpression="Framework"  />
-                                <asp:BoundField DataField="UsedOnPages" HeaderText="Used in pages" 
-                                    InsertVisible="False" ReadOnly="True" SortExpression="Pages().Count()"  />
-                                <asp:BoundField DataField="ChildTemplatesCount" HeaderText="Child templates" 
+                <div>
+                    <asp:GridView ID="TemplateHierarchyListControl" runat="server" GridLines="Both" PagerStyle-CssClass="sf-pager" PageSize="10" AllowCustomPaging="true" AllowPaging="false" AllowSorting="false"
+                        OnSorting="Templates_Sorting" OnPageIndexChanging="Templates_PageIndexChanging" OnRowCommand="TemplateHierarchy_Click"
+                        ShowHeaderWhenEmpty="True" EmptyDataText="No records found" AutoGenerateColumns="false" CssClass="table table-sm">
+                        <Columns>
+                            <asp:TemplateField HeaderText="Title" SortExpression="Title">
+                                <ItemTemplate>
+                                    <asp:LinkButton runat="server" ID="lnk" Enabled="true" Text='<%# Eval("Title")%>'
+                                        CommandArgument='<%# Eval("Id") +";template;" + Eval("Title") ?? Eval("Name") %>' CommandName="GetDetails" />
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                            <asp:BoundField DataField="Name" HeaderText="Template name"
+                                InsertVisible="False" ReadOnly="True" SortExpression="Name" />
+                            <asp:BoundField DataField="Id" HeaderText="ID"
+                                InsertVisible="False" ReadOnly="True" SortExpression="Id" />
+                            <asp:BoundField DataField="Framework" HeaderText="Framework"
+                                InsertVisible="False" ReadOnly="True" SortExpression="Framework" />
+                            <asp:BoundField DataField="UsedOnPages" HeaderText="Used in pages"
+                                InsertVisible="False" ReadOnly="True" SortExpression="Pages().Count()" />
+                            <asp:BoundField DataField="ChildTemplatesCount" HeaderText="Child templates"
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="WidgetsCount" HeaderText="All widgets"
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="CustomWidgetsCount" HeaderText="Custom widgets"
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="ParentTemplateName" HeaderText="Parent template"
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="TemplateUrl"
+                                DataNavigateUrlFormatString="{0}" Target="_blank" />
+                            <asp:TemplateField HeaderText="CLI command">
+                                <ItemTemplate>
+                                    <asp:LinkButton runat="server" OnClientClick='<%# string.Format("copyTemplateCommandToClipboard(\"{0}\"); return false;", Eval("Id")) %>'>Copy</asp:LinkButton>
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                        </Columns>
+                    </asp:GridView>
+                </div>
+                <div>
+                    <asp:GridView ID="SinglePageListControl" runat="server" GridLines="Both" AllowSorting="true" PagerStyle-CssClass="sf-pager" PageSize="15" AllowCustomPaging="true" AllowPaging="true" 
+                        OnSorting="Pages_Sorting" OnPageIndexChanging="Pages_PageIndexChanging" AutoGenerateColumns="false" OnRowCommand="GetWidgetsInfo_Click" CssClass="table table-sm">
+                        <Columns>
+                            <asp:BoundField DataField="Title" HeaderText="Title" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="PageNodeId" HeaderText="ID" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="NavigationNodeId"  />
+                            <asp:BoundField DataField="Language" HeaderText="Translation" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="Culture"  />
+                            <asp:BoundField DataField="Framework" HeaderText="Framework" 
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="IsPublished" HeaderText="Published" 
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="IsSplit" HeaderText="Split page" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="WidgetsCount" HeaderText="All widgets" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="CustomWidgetsCount" HeaderText="Custom widgets" 
                                     InsertVisible="False" ReadOnly="True"  />
-                                <asp:BoundField DataField="WidgetsCount" HeaderText="All widgets" 
-                                    InsertVisible="False" ReadOnly="True"  />
-                                <asp:BoundField DataField="CustomWidgetsCount" HeaderText="Custom widgets" 
-                                    InsertVisible="False" ReadOnly="True"  />
-                                <asp:BoundField DataField="ParentTemplateName" HeaderText="Parent template" 
-                                    InsertVisible="False" ReadOnly="True"  />
-                                <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="TemplateUrl" 
-                                    DataNavigateUrlFormatString="{0}" Target="_blank" />
-                                <asp:TemplateField HeaderText="CLI command" >
-                                    <ItemTemplate>
-                                        <asp:LinkButton runat = "server" OnClientClick = '<%# string.Format("copyTemplateCommandToClipboard(\"{0}\"); return false;", Eval("Id")) %>' >Copy</asp:LinkButton> 
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                            </Columns>
-                        </asp:GridView>
-
-                    </div>
-        <div>
-            <asp:GridView ID="singlePageList" runat="server" GridLines="Both" AllowSorting="true" PagerStyle-CssClass="sf-pager" PageSize="15" AllowCustomPaging="true" AllowPaging="true" 
-    OnSorting="Pages_Sorting" OnPageIndexChanging="Pages_PageIndexChanging" AutoGenerateColumns="false" OnRowCommand="GetWidgetsInfo_Click" CssClass="table table-sm">
-    <Columns>
-        <asp:BoundField DataField="Title" HeaderText="Title" 
-            InsertVisible="False" ReadOnly="True"  />
-        <asp:BoundField DataField="PageNodeId" HeaderText="ID" 
-            InsertVisible="False" ReadOnly="True" SortExpression="NavigationNodeId"  />
-        <asp:BoundField DataField="Language" HeaderText="Translation" 
-            InsertVisible="False" ReadOnly="True" SortExpression="Culture"  />
-        <asp:BoundField DataField="Framework" HeaderText="Framework" 
-            InsertVisible="False" ReadOnly="True" />
-        <asp:BoundField DataField="IsPublished" HeaderText="Published" 
-            InsertVisible="False" ReadOnly="True" />
-        <asp:BoundField DataField="IsSplit" HeaderText="Split page" 
-            InsertVisible="False" ReadOnly="True"  />
-        <asp:BoundField DataField="WidgetsCount" HeaderText="All widgets" 
-            InsertVisible="False" ReadOnly="True"  />
-        <asp:BoundField DataField="CustomWidgetsCount" HeaderText="Custom widgets" 
-                InsertVisible="False" ReadOnly="True"  />
-        <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="PageUrl" 
-            DataNavigateUrlFormatString="{0}" Target="_blank" />
-        <asp:TemplateField HeaderText="CLI command" >
-            <ItemTemplate>
-                <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyPageCommandToClipboard(\"{0}\", \"{1}\"); return false;", Eval("PageNodeId"), Eval("SiteId")) %>' >Copy</asp:LinkButton> 
-            </ItemTemplate>
-        </asp:TemplateField>
-    </Columns>
-</asp:GridView>
-        </div>
+                            <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="PageUrl" 
+                                DataNavigateUrlFormatString="{0}" Target="_blank" />
+                            <asp:TemplateField HeaderText="CLI command" >
+                                <ItemTemplate>
+                                    <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyPageCommandToClipboard(\"{0}\", \"{1}\"); return false;", Eval("PageNodeId"), Eval("SiteId")) %>' >Copy</asp:LinkButton> 
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                        </Columns>
+                    </asp:GridView>
+            </div>
                 
                 <div>
-                    <asp:GridView ID="singleWidgetList" OnRowCommand="WidgetDetails_RowCommand"
+                    <asp:GridView ID="SingleWidgetListControl" OnRowCommand="WidgetDetails_RowCommand"
                         ShowHeaderWhenEmpty="True" EmptyDataText="No records found" runat="server" GridLines="Both" AutoGenerateColumns="false" CssClass="table table-sm">
                         <Columns>
                             <asp:BoundField DataField="Title" HeaderText="Widget name" 
@@ -393,94 +401,114 @@
                         </Columns>
                     </asp:GridView>
                 </div>
+                <div>
+                    <asp:GridView ID="singleFormList"
+                        ShowHeaderWhenEmpty="True" EmptyDataText="No records found" runat="server" GridLines="Both" AutoGenerateColumns="false" CssClass="table table-sm">
+                        <Columns>
+                            <asp:BoundField DataField="Title" HeaderText="Form title" 
+                                InsertVisible="False" ReadOnly="True"/>
+                            <asp:BoundField DataField="Name" HeaderText="Form name" 
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="Id" HeaderText="ID" 
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="Framework" HeaderText="Framework" 
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="UsedOnPages" HeaderText="Used in pages" 
+                                InsertVisible="False" ReadOnly="True"   />
+                            <asp:BoundField DataField="UsedOnTemplates" HeaderText="Used in templates" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="FieldsCount" HeaderText="All fields" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="FormEntriesCount" HeaderText="Responses" 
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="FormUrl" 
+                                DataNavigateUrlFormatString="{0}" Target="_blank" />
+                        </Columns>
+                    </asp:GridView>
+                </div>
         
-        <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="allTemplatesGridTitle"></asp:Label></h2>
+                <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="allTemplatesGridTitle"></asp:Label></h2>
               
-        <div>
-            <asp:GridView ID="templateList" runat="server" GridLines="Both" PagerStyle-CssClass="sf-pager" PageSize="10" AllowCustomPaging="true" AllowPaging="true" AllowSorting="true"
-                OnSorting="Templates_Sorting" OnPageIndexChanging="Templates_PageIndexChanging"  OnRowCommand="TemplateHierarchy_Click"
-                ShowHeaderWhenEmpty="True" EmptyDataText="No records found" AutoGenerateColumns="false" CssClass="table table-sm">
-                <Columns>
-                    <asp:TemplateField HeaderText="Title" SortExpression="Title" >
-                        <ItemTemplate>
-                            <asp:LinkButton runat="server" ID="lnk" Enabled="true" Text='<%# Eval("Title")%>' 
-                                    CommandArgument='<%# Eval("Id") +";template;" + Eval("Title") ?? Eval("Name")%>' CommandName="GetDetails" />
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                    <asp:BoundField DataField="Name" HeaderText="Template name" 
-                        InsertVisible="False" ReadOnly="True" SortExpression="Name"  />
-                    <asp:BoundField DataField="Id" HeaderText="ID" 
-                        InsertVisible="False" ReadOnly="True" SortExpression="Id"  />
-                    <asp:BoundField DataField="Framework" HeaderText="Framework" 
-                        InsertVisible="False" ReadOnly="True" SortExpression="Framework"  />
-                    <asp:BoundField DataField="UsedOnPages" HeaderText="Used in pages" 
-                        InsertVisible="False" ReadOnly="True" SortExpression="Pages().Count()"  />
-                    <asp:BoundField DataField="ChildTemplatesCount" HeaderText="Child templates" 
-                        InsertVisible="False" ReadOnly="True"  />
-                    <asp:BoundField DataField="WidgetsCount" HeaderText="All widgets" 
-                        InsertVisible="False" ReadOnly="True"  />
-                    <asp:BoundField DataField="CustomWidgetsCount" HeaderText="Custom widgets" 
-                        InsertVisible="False" ReadOnly="True"  />
-                    <asp:BoundField DataField="ParentTemplateName" HeaderText="Parent template" 
-                        InsertVisible="False" ReadOnly="True"  />
-                    <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="TemplateUrl" 
-                        DataNavigateUrlFormatString="{0}" Target="_blank" />
-                    <asp:TemplateField HeaderText="CLI command" >
-                        <ItemTemplate>
-                            <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyTemplateCommandToClipboard(\"{0}\"); return false;", Eval("Id")) %>' >Copy</asp:LinkButton> 
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
-
-        </div>
-
+                <div>
+                    <asp:GridView ID="TemplateListControl" runat="server" GridLines="Both" PagerStyle-CssClass="sf-pager" PageSize="10" AllowCustomPaging="true" AllowPaging="true" AllowSorting="true"
+                        OnSorting="Templates_Sorting" OnPageIndexChanging="Templates_PageIndexChanging"  OnRowCommand="TemplateHierarchy_Click"
+                        ShowHeaderWhenEmpty="True" EmptyDataText="No records found" AutoGenerateColumns="false" CssClass="table table-sm">
+                        <Columns>
+                            <asp:TemplateField HeaderText="Title" SortExpression="Title" >
+                                <ItemTemplate>
+                                    <asp:LinkButton runat="server" ID="lnk" Enabled="true" Text='<%# Eval("Title")%>' 
+                                            CommandArgument='<%# Eval("Id") +";template;" + Eval("Title") ?? Eval("Name")%>' CommandName="GetDetails" />
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                            <asp:BoundField DataField="Name" HeaderText="Template name" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="Name"  />
+                            <asp:BoundField DataField="Id" HeaderText="ID" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="Id"  />
+                            <asp:BoundField DataField="Framework" HeaderText="Framework" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="Framework"  />
+                            <asp:BoundField DataField="UsedOnPages" HeaderText="Used in pages" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="Pages().Count()"  />
+                            <asp:BoundField DataField="ChildTemplatesCount" HeaderText="Child templates" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="WidgetsCount" HeaderText="All widgets" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="CustomWidgetsCount" HeaderText="Custom widgets" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="ParentTemplateName" HeaderText="Parent template" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="TemplateUrl" 
+                                DataNavigateUrlFormatString="{0}" Target="_blank" />
+                            <asp:TemplateField HeaderText="CLI command" >
+                                <ItemTemplate>
+                                    <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyTemplateCommandToClipboard(\"{0}\"); return false;", Eval("Id")) %>' >Copy</asp:LinkButton> 
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                        </Columns>
+                    </asp:GridView>
+                </div>
                 
-        <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="allPagesGridTitle"></asp:Label></h2>
-        <div>
-
-        <asp:GridView ID="pageList" runat="server" GridLines="Both" AllowSorting="true" PagerStyle-CssClass="sf-pager" PageSize="15" AllowCustomPaging="true" AllowPaging="true" 
-            OnSorting="Pages_Sorting" OnPageIndexChanging="Pages_PageIndexChanging" 
-            ShowHeaderWhenEmpty="True" EmptyDataText="No records found" AutoGenerateColumns="false" OnRowCommand="PageHierarchy_Click" CssClass="table table-sm">
-            <Columns>
-                <asp:TemplateField HeaderText="Title" SortExpression="NavigationNode.Title" >
-                    <ItemTemplate>
-                        <asp:LinkButton runat="server" ID="lnk" Enabled="true" Text='<%# Eval("Title")%>' 
-                                CommandArgument='<%# Eval("Id") +";page;" + Eval("Title")%>' CommandName="GetDetails" />
-                    </ItemTemplate>
-                </asp:TemplateField>
-                <asp:BoundField DataField="PageNodeId" HeaderText="ID" 
-                    InsertVisible="False" ReadOnly="True" SortExpression="NavigationNodeId"  />
-            
-                
-                <asp:BoundField DataField="Language" HeaderText="Translation" 
-                    InsertVisible="False" ReadOnly="True" SortExpression="Culture"  />
-                <asp:BoundField DataField="Framework" HeaderText="Framework" 
-                    InsertVisible="False" ReadOnly="True" SortExpression="Template.Framework" />
-                <asp:BoundField DataField="IsPublished" HeaderText="Published" 
-                    InsertVisible="False" ReadOnly="True" />
-                <asp:BoundField DataField="IsSplit" HeaderText="Split page" 
-                    InsertVisible="False" ReadOnly="True"  />
-                <asp:BoundField DataField="WidgetsCount" HeaderText="All widgets" 
-                    InsertVisible="False" ReadOnly="True"  />
-                <asp:BoundField DataField="CustomWidgetsCount" HeaderText="Custom widgets" 
-                        InsertVisible="False" ReadOnly="True"  />
-                <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="PageUrl" 
-                    DataNavigateUrlFormatString="{0}" Target="_blank" />
-                <asp:TemplateField HeaderText="CLI command" >
-                    <ItemTemplate>
-                        <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyPageCommandToClipboard(\"{0}\", \"{1}\"); return false;", Eval("PageNodeId"), Eval("SiteId")) %>' >Copy</asp:LinkButton> 
-                    </ItemTemplate>
-                </asp:TemplateField>
-            </Columns>
-        </asp:GridView>
+                <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="allPagesGridTitle"></asp:Label></h2>
+                <div>
+                    <asp:GridView ID="PageListControl" runat="server" GridLines="Both" AllowSorting="true" PagerStyle-CssClass="sf-pager" PageSize="15" AllowCustomPaging="true" AllowPaging="true" 
+                        OnSorting="Pages_Sorting" OnPageIndexChanging="Pages_PageIndexChanging" 
+                        ShowHeaderWhenEmpty="True" EmptyDataText="No records found" AutoGenerateColumns="false" OnRowCommand="PageHierarchy_Click" CssClass="table table-sm">
+                        <Columns>
+                            <asp:TemplateField HeaderText="Title" SortExpression="NavigationNode.Title" >
+                                <ItemTemplate>
+                                    <asp:LinkButton runat="server" ID="lnk" Enabled="true" Text='<%# Eval("Title")%>' 
+                                            CommandArgument='<%# Eval("Id") +";page;" + Eval("Title")%>' CommandName="GetDetails" />
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                            <asp:BoundField DataField="PageNodeId" HeaderText="ID" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="NavigationNodeId"  /> 
+                            <asp:BoundField DataField="Language" HeaderText="Translation" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="Culture"  />
+                            <asp:BoundField DataField="Framework" HeaderText="Framework" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="Template.Framework" />
+                            <asp:BoundField DataField="IsPublished" HeaderText="Published" 
+                                InsertVisible="False" ReadOnly="True" />
+                            <asp:BoundField DataField="IsSplit" HeaderText="Split page" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="WidgetsCount" HeaderText="All widgets" 
+                                InsertVisible="False" ReadOnly="True"  />
+                            <asp:BoundField DataField="CustomWidgetsCount" HeaderText="Custom widgets" 
+                                    InsertVisible="False" ReadOnly="True"  />
+                            <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="PageUrl" 
+                                DataNavigateUrlFormatString="{0}" Target="_blank" />
+                            <asp:TemplateField HeaderText="CLI command" >
+                                <ItemTemplate>
+                                    <asp:LinkButton  runat = "server"  OnClientClick = '<%# string.Format("copyPageCommandToClipboard(\"{0}\", \"{1}\"); return false;", Eval("PageNodeId"), Eval("SiteId")) %>' >Copy</asp:LinkButton> 
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                        </Columns>
+                    </asp:GridView>
                 </div>
 
                 <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="allWidgetsGridTitle"></asp:Label></h2>
                 <div>
-                    <asp:GridView ID="AllWidgets" OnRowCommand="WidgetDetails_RowCommand" PagerStyle-CssClass="sf-pager" AllowPaging="true" AllowCustomPaging="true" OnPageIndexChanging="AllWidgets_PageIndexChanging"
-                         AllowSorting="true" OnSorting="AllWidgets_Sorting"
-                        ShowHeaderWhenEmpty="True" EmptyDataText="No records found" runat="server" GridLines="Both" AutoGenerateColumns="false" CssClass="table table-sm">
+                    <asp:GridView ID="AllWidgetsControl" runat="server" OnRowCommand="WidgetDetails_RowCommand" PagerStyle-CssClass="sf-pager" AllowPaging="true" AllowCustomPaging="true" OnPageIndexChanging="AllWidgets_PageIndexChanging"
+                        AllowSorting="true" OnSorting="AllWidgets_Sorting"
+                        ShowHeaderWhenEmpty="True" EmptyDataText="No records found" GridLines="Both" AutoGenerateColumns="false" CssClass="table table-sm">
                         <Columns>
                             <asp:TemplateField HeaderText="Widget name" SortExpression="Title">
                                 <ItemTemplate>
@@ -499,25 +527,57 @@
                         </Columns>
                     </asp:GridView>
                 </div>
-                
+
+                <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="fieldsInfoTitle"></asp:Label></h2>
                 <div>
-                    <h3><asp:Label runat="server" ID="WidgetDetailsHeader"></asp:Label></h3>
-                    <asp:GridView ID="widgetDetailsGrid" runat="server" GridLines="Both"
-                            ShowHeaderWhenEmpty="True" EmptyDataText="No records found" AutoGenerateColumns="false" CssClass="table table-sm">
-                            <Columns
-                                ><asp:HyperLinkField HeaderText="Page title" DataTextField ="PageTitle" DataNavigateUrlFields="PageUrl" 
-                                    DataNavigateUrlFormatString="{0}" Target="_blank" SortExpression="PageTitle" />
-                                <asp:BoundField DataField="PageCulture" HeaderText="Page culture" 
-                                    InsertVisible="False" ReadOnly="True" SortExpression="PageCulture"  />
-                                <asp:BoundField DataField="IsOverriden" HeaderText="Is overriden" 
-                                    InsertVisible="False" ReadOnly="True" SortExpression="IsOverriden" />
-                                <asp:BoundField DataField="IsEditable" HeaderText="Is editable" 
-                                    InsertVisible="False" ReadOnly="True" SortExpression="IsEditable" />
-                                <asp:BoundField DataField="IsPersonalized" HeaderText="Is personalized" 
-                                    InsertVisible="False" ReadOnly="True" SortExpression="IsPersonalized" />
-                            </Columns>
-                        </asp:GridView>
+                    <asp:GridView ID="fieldsList"
+                        ShowHeaderWhenEmpty="True" EmptyDataText="No records found" runat="server" GridLines="Both" AutoGenerateColumns="false" CssClass="table table-sm">
+                        <Columns>
+                            <asp:BoundField DataField="Title" HeaderText="Label" 
+                                InsertVisible="False" ReadOnly="True"/>
+                            <asp:BoundField DataField="Name" HeaderText="Name (used in code)" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="Name" />
+                            <asp:BoundField DataField="FieldType" HeaderText="Type" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="FieldType" />
+                            <asp:BoundField DataField="TextType" HeaderText="Type (text field only)" 
+                                InsertVisible="False" ReadOnly="True" SortExpression="TextType" />
+                        </Columns>
+                    </asp:GridView>
                 </div>
+                
+                <h2 class="h3 mb-3 mt-5"><asp:Label runat="server" ID="allFormsTitle"></asp:Label></h2>
+                <div>
+                     <asp:GridView ID="formsList" runat="server" GridLines="Both" PagerStyle-CssClass="sf-pager" PageSize="10" AllowCustomPaging="true" AllowPaging="true" AllowSorting="true"
+                         OnRowCommand="Form_RowCommand" OnSorting="FormsList_Sorting" OnPageIndexChanging="FormsList_PageIndexChanging"
+                         ShowHeaderWhenEmpty="True" EmptyDataText="No records found" AutoGenerateColumns="false" CssClass="table table-sm">
+                         <Columns>
+                             <asp:TemplateField HeaderText="Title" SortExpression="Title" >
+                                 <ItemTemplate>
+                                     <asp:LinkButton runat="server" ID="lnk" Enabled="true" Text='<%# Eval("Title")%>' 
+                                             CommandArgument='<%# Eval("Id") +";" +Eval("Title") +";" +Eval("Name") +";" + Eval("Framework") +";" +Eval("UsedOnPages") +";" +Eval("UsedOnTemplates")%>' CommandName="GetDetails" />
+                                 </ItemTemplate>
+                             </asp:TemplateField>
+                             <asp:BoundField DataField="Name" HeaderText="Form name" 
+                                 InsertVisible="False" ReadOnly="True" SortExpression="Name"  />
+                             <asp:BoundField DataField="Id" HeaderText="ID" 
+                                 InsertVisible="False" ReadOnly="True" SortExpression="Id"  />
+                             <asp:BoundField DataField="Framework" HeaderText="Framework" 
+                                 InsertVisible="False" ReadOnly="True" SortExpression="Framework"  />
+                             <asp:BoundField DataField="UsedOnPages" HeaderText="Used in pages" 
+                                 InsertVisible="False" ReadOnly="True"   />
+                             <asp:BoundField DataField="UsedOnTemplates" HeaderText="Used in templates" 
+                                 InsertVisible="False" ReadOnly="True"  />
+                             <asp:BoundField DataField="FieldsCount" HeaderText="All fields" 
+                                 InsertVisible="False" ReadOnly="True" SortExpression="Controls.Count"  />
+                             <asp:BoundField DataField="FormEntriesCount" HeaderText="Responses" 
+                                 InsertVisible="False" ReadOnly="True" />
+                             <asp:HyperLinkField HeaderText="View in CMS" Text="View" DataNavigateUrlFields="FormUrl" 
+                                 DataNavigateUrlFormatString="{0}" Target="_blank" />
+                             
+                         </Columns>
+                     </asp:GridView>
+                </div>
+                
             </main>
         </section>
 
@@ -598,7 +658,19 @@
                     document.getElementById("btnSearch").click();
                 }
             });
+
+            const viewName = document.querySelector('.sf-main-header h1').innerText.toLowerCase();
+            const siteId = document.getElementById("SitesDropDown").value;
+            const siteNameLabel = document.querySelector("#SitesDropDown option[selected]").innerText.replaceAll(" ", "");
+            const siteSelectionElement = document.querySelector("[name='siteSelection'][checked='checked']");
+            var siteSelectionQueryString = siteSelectionElement ? '&siteSelection=' + siteSelectionElement.value : "";
+            const languageDropdown = document.getElementById("LanguageDropDown");
+            const languageQueryString = languageDropdown?.value ? '&language=' + languageDropdown.value : "";
+            document.getElementById("exportLnk").href = 'Sitefinity/export-Analyzer?viewName=' + viewName + '&siteId=' + siteId + siteSelectionQueryString + languageQueryString;
         });
+
+
     </script>
+
 </body>
 </html>
